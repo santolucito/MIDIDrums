@@ -37,6 +37,19 @@ body {
   display: none;
 }
 
+.grid-container {
+  display: grid;
+  grid-template-columns: auto auto auto;
+  padding: 10px;
+}
+
+.boxsizingBorder {
+    -webkit-box-sizing: border-box;
+       -moz-box-sizing: border-box;
+            box-sizing: border-box;
+    width: 100%;
+}
+
 #io { display:block; padding:5px 20px;}
 .container.active {
 	display: block;
