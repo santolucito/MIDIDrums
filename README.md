@@ -5,3 +5,14 @@ This is a MIDI-fied version of the [Shiny Drum Machine](http://chromium.googleco
 # Build
 
 browserify js/main.js -o js/compiled.js
+
+# Examples
+
+function genBeat(oldBeat, currentTimestep){
+  
+  let b1 = new Array(16).fill(0);
+  oldBeat.rhythm1 = b1.map((v,i) => {return (v+i)%3})
+  oldBeat.rhythm3 = b1.map((v,i) => {return (v+i+1)%3})
+  oldBeat.rhythm6 = b1.map((v,i) => {return (i%4 == 0) ? 1 : 0})
+  return oldBeat;
+};

@@ -8,7 +8,7 @@ exports.bootCodeMirror = function() {
 		lineNumbers: true, 
 		mode:  "javascript"
 		});
-	myCodeMirror.setValue('function genBeat(oldBeat, currentTimestep){\n\n   return oldBeat;\n};');
+	myCodeMirror.setValue('function genBeat(oldBeat, currentTimestep){\n\n  return oldBeat;\n};');
     return myCodeMirror;	
 };
 
@@ -86,6 +86,29 @@ function cloneBeat(source) {
     beat.rhythm6 = source.rhythm6.slice(0);
     
     return beat;
+}
+
+function isValidBeat(beat) {
+    
+/*    beat.kitIndex = source.kitIndex;
+    beat.effectIndex = source.effectIndex;
+    beat.tempo = source.tempo;
+    beat.swingFactor = source.swingFactor;
+    beat.effectMix = source.effectMix;
+    beat.kickPitchVal = source.kickPitchVal;
+    beat.snarePitchVal = source.snarePitchVal;
+    beat.hihatPitchVal = source.hihatPitchVal;
+    beat.tom1PitchVal = source.tom1PitchVal;
+    beat.tom2PitchVal = source.tom2PitchVal;
+    beat.tom3PitchVal = source.tom3PitchVal;*/
+    var valid = true;
+    for (i = 1; i <= 6; i++) {
+        valid = valid &&
+            Array.isArray(beat['rhythm'+i.toString()]) &&
+            beat['rhythm'+i.toString()].every((v) => v <=2 && v >=0);
+    }
+    console.log(valid);
+    return valid;
 }
 
 // theBeat is the object representing the current beat/groove
@@ -564,9 +587,14 @@ function advanceNote() {
     //every time we advance, pull latest code and update beat object
     var updatedCode = codeMirrorInstance.getValue()
     try {
+        //TODO if(codeChanged) {
         let f = new Function("theBeat", "rhythmIndex", '"use strict"; ' + updatedCode + ' return (genBeat(theBeat, rhythmIndex));');
-        theBeat = f(theBeat, rhythmIndex);
-        redrawAllNotes();
+        let newBeat = f(cloneBeat(theBeat), rhythmIndex);
+        if (isValidBeat(newBeat)){
+            theBeat = newBeat;
+            redrawAllNotes();
+        }
+        
     }
     catch(err) {
 
@@ -1129,7 +1157,8 @@ function loadBeat(beat) {
     theBeat = cloneBeat(beat);
     currentKit = kits[theBeat.kitIndex];
     setEffect(theBeat.effectIndex);
-
+    console.log(theBeat.tom1PitchVal)
+    
     // apply values from sliders
     sliderSetValue('effect_thumb', theBeat.effectMix);
     sliderSetValue('kick_thumb', theBeat.kickPitchVal);

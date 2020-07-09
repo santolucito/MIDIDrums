@@ -7,7 +7,7 @@ exports.bootCodeMirror = function() {
 		lineNumbers: true, 
 		mode:  "javascript"
 		});
-	myCodeMirror.setValue('function genBeat(oldBeat, currentTimestep){\n\n   return oldBeat;\n};');
+	myCodeMirror.setValue('function genBeat(oldBeat, currentTimestep){\n\n  return oldBeat;\n};');
     return myCodeMirror;	
 };
 
