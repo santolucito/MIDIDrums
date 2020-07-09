@@ -1,4 +1,8 @@
 
+
+//We pull this in on init, which allows us to grab code as the drum machine runs
+var codeMirrorInstance = null
+
 // Events
 // init() once the page has finished loading.
 //window.onload = init;
@@ -37,6 +41,10 @@ var beatDemo = [
     {"kitIndex":1,"effectIndex":4,"tempo":120,"swingFactor":0,"effectMix":0.25,"kickPitchVal":0.7887323943661972,"snarePitchVal":0.49295774647887325,"hihatPitchVal":0.5,"tom1PitchVal":0.323943661971831,"tom2PitchVal":0.3943661971830986,"tom3PitchVal":0.323943661971831,"rhythm1":[2,0,0,0,0,0,0,2,2,0,0,0,0,0,0,1],"rhythm2":[0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0],"rhythm3":[0,0,1,0,2,0,1,0,1,0,1,0,2,0,2,0],"rhythm4":[2,0,2,0,0,0,0,0,2,0,0,0,0,2,0,0],"rhythm5":[0,0,2,0,0,0,0,0,0,0,0,0,0,0,0,0],"rhythm6":[0,2,0,0,0,2,0,0,0,2,0,0,0,0,0,0]},
     {"kitIndex":0,"effectIndex":1,"tempo":60,"swingFactor":0.5419847328244275,"effectMix":0.25,"kickPitchVal":0.5,"snarePitchVal":0.5,"hihatPitchVal":0.5,"tom1PitchVal":0.5,"tom2PitchVal":0.5,"tom3PitchVal":0.5,"rhythm1":[2,2,0,1,2,2,0,1,2,2,0,1,2,2,0,1],"rhythm2":[0,0,2,0,0,0,2,0,0,0,2,0,0,0,2,0],"rhythm3":[2,1,1,1,2,1,1,1,2,1,1,1,2,1,1,1],"rhythm4":[0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0],"rhythm5":[0,0,1,0,0,1,0,1,0,0,1,0,0,0,1,0],"rhythm6":[1,0,0,1,0,1,0,1,1,0,0,1,1,1,1,0]},
 ];
+
+exports.setBeat = function(newBeat) {
+    theBeat = newBeat
+}
 
 function cloneBeat(source) {
     var beat = new Object();
@@ -350,7 +358,9 @@ function showPlayAvailable() {
     play.src = "images/btn_play.png";
 }
 
-exports.initDrums = function() {
+exports.initDrums = function(cmInstance) {
+    codeMirrorInstance = cmInstance;
+
     // Let the beat demos know when all of their assets have been loaded.
     // Add some new methods to support this.
     for (var i = 0; i < beatDemo.length; ++i) {
@@ -532,6 +542,20 @@ function makeKitList() {
 }
 
 function advanceNote() {
+    
+    //every time we advance, pull latest code and update beat object
+    var updatedCode = codeMirrorInstance.getValue()
+    try {
+        //TODO if(codeChanged) {
+        let f = new Function("theBeat", "rhythmIndex", '"use strict"; ' + updatedCode + ' return (genBeat(theBeat, rhythmIndex));');
+        theBeat = f(theBeat, rhythmIndex);
+        redrawAllNotes();
+    }
+    catch(err) {
+
+    }
+    
+
     // Advance time by a 16th note...
     var secondsPerBeat = 60.0 / theBeat.tempo;
 
@@ -1134,7 +1158,6 @@ function updateControls() {
     sliderSetPosition('tom3_thumb', theBeat.tom3PitchVal);
 }
 
-
 function drawNote(draw, xindex, yindex) {    
     var elButton = document.getElementById(instruments[yindex] + '_' + xindex);
     switch (draw) {
@@ -1142,6 +1165,14 @@ function drawNote(draw, xindex, yindex) {
         case 1: elButton.src = 'images/button_half.png'; break;
         case 2: elButton.src = 'images/button_on.png'; break;
     }
+}
+
+function redrawAllNotes() {
+    for (y = 0; y < 6; y++) { //6 rhythm patterns in theBeat
+        for (x = 0; x < 16; x++)  { //16 beat subdivisions
+            drawNote(theBeat['rhythm'+(y+1).toString()][x], x, y);
+        }
+    }    
 }
 
 function drawPlayhead(xindex) {
