@@ -590,7 +590,7 @@ function advanceNote() {
         //TODO if(codeChanged) {
         let f = new Function("theBeat", "rhythmIndex", '"use strict"; ' + updatedCode + ' return (genBeat(theBeat, rhythmIndex));');
         let newBeat = f(cloneBeat(theBeat), rhythmIndex);
-        if (isValidBeat(newBeat)){
+        if (isValidBeat(newBeat)) { // && theBeat != newBeat){
             theBeat = newBeat;
             redrawAllNotes();
         }
@@ -868,6 +868,27 @@ function sliderSetPosition(slider, value) {
     }
 }
 
+function synthCode(newNoteValue, rhythmIndex, instrumentIndex) {
+    //get current code
+    var currentCode = codeMirrorInstance.getValue()
+    
+    //generate new line for changed note
+    newLine = "  oldBeat.rhythm" + (instrumentIndex+1) + "[" + rhythmIndex + "] = " + newNoteValue + ";\n"
+    existingLineLoc = currentCode.indexOf("  oldBeat.rhythm" + (instrumentIndex+1) + "[" + rhythmIndex + "] =")
+    if (existingLineLoc >=0) {
+        var lineChPos = codeMirrorInstance.posFromIndex(existingLineLoc);
+        var endReplacePos = JSON.parse(JSON.stringify(lineChPos));
+        endReplacePos.ch = newLine.length+1;
+        codeMirrorInstance
+            .replaceRange(newLine.slice(0, -1), lineChPos, endReplacePos);
+    }
+    else {
+        //insert line before return statement
+        //TODO fix function header and return statement so user cannot change it
+        codeMirrorInstance.replaceRange(newLine, {line: codeMirrorInstance.lineCount()-2, ch: 0})
+    }
+}
+
 function handleButtonMouseDown(event) {
     var notes = theBeat.rhythm1;
     
@@ -887,43 +908,45 @@ function handleButtonMouseDown(event) {
         case 5: notes = theBeat.rhythm6; break;
     }
 
-    notes[rhythmIndex] = (notes[rhythmIndex] + 1) % 3;
+    var newNoteValue = (notes[rhythmIndex] + 1) % 3;
+
+    notes[rhythmIndex] = newNoteValue
 
     if (instrumentIndex == currentlyActiveInstrument)
         showCorrectNote( rhythmIndex, notes[rhythmIndex] );
 
     drawNote(notes[rhythmIndex], rhythmIndex, instrumentIndex);
-
-    var note = notes[rhythmIndex];
-    
-    if (note) {
+  
+    if (newNoteValue) {
         switch(instrumentIndex) {
         case 0:  // Kick
-          playNote(currentKit.kickBuffer, false, 0,0,-2, 0.5 * theBeat.effectMix, volumes[note] * 1.0, kickPitch, 0);
+          playNote(currentKit.kickBuffer, false, 0,0,-2, 0.5 * theBeat.effectMix, volumes[newNoteValue] * 1.0, kickPitch, 0);
           break;
 
         case 1:  // Snare
-          playNote(currentKit.snareBuffer, false, 0,0,-2, theBeat.effectMix, volumes[note] * 0.6, snarePitch, 0);
+          playNote(currentKit.snareBuffer, false, 0,0,-2, theBeat.effectMix, volumes[newNoteValue] * 0.6, snarePitch, 0);
           break;
 
         case 2:  // Hihat
           // Pan the hihat according to sequence position.
-          playNote(currentKit.hihatBuffer, true, 0.5*rhythmIndex - 4, 0, -1.0, theBeat.effectMix, volumes[note] * 0.7, hihatPitch, 0);
+          playNote(currentKit.hihatBuffer, true, 0.5*rhythmIndex - 4, 0, -1.0, theBeat.effectMix, volumes[newNoteValue] * 0.7, hihatPitch, 0);
           break;
 
         case 3:  // Tom 1   
-          playNote(currentKit.tom1, false, 0,0,-2, theBeat.effectMix, volumes[note] * 0.6, tom1Pitch, 0);
+          playNote(currentKit.tom1, false, 0,0,-2, theBeat.effectMix, volumes[newNoteValue] * 0.6, tom1Pitch, 0);
           break;
 
         case 4:  // Tom 2   
-          playNote(currentKit.tom2, false, 0,0,-2, theBeat.effectMix, volumes[note] * 0.6, tom2Pitch, 0);
+          playNote(currentKit.tom2, false, 0,0,-2, theBeat.effectMix, volumes[newNoteValue] * 0.6, tom2Pitch, 0);
           break;
 
         case 5:  // Tom 3   
-          playNote(currentKit.tom3, false, 0,0,-2, theBeat.effectMix, volumes[note] * 0.6, tom3Pitch, 0);
+          playNote(currentKit.tom3, false, 0,0,-2, theBeat.effectMix, volumes[newNoteValue] * 0.6, tom3Pitch, 0);
           break;
         }
     }
+
+    synthCode(newNoteValue, rhythmIndex, instrumentIndex)
 }
 
 function handleKitComboMouseDown(event) {
@@ -1157,7 +1180,6 @@ function loadBeat(beat) {
     theBeat = cloneBeat(beat);
     currentKit = kits[theBeat.kitIndex];
     setEffect(theBeat.effectIndex);
-    console.log(theBeat.tom1PitchVal)
     
     // apply values from sliders
     sliderSetValue('effect_thumb', theBeat.effectMix);
