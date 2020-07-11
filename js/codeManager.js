@@ -7,7 +7,8 @@ exports.bootCodeMirror = function() {
 		lineNumbers: true, 
 		mode:  "javascript"
 		});
-	myCodeMirror.setValue('function genBeat(oldBeat, currentTimestep){\n\n  return oldBeat;\n};');
+	//TODO fix function header and return statement outside code window so user cannot change it, but still sees it
+	myCodeMirror.setValue('function genBeat(b, currentTimestep){\n\n  return b;\n};');
     return myCodeMirror;	
 };
 

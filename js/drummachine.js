@@ -564,9 +564,104 @@ function makeKitList() {
     }
 }
 
-function advanceNote() {
+/// ------- BEGIN SYNTH CODE -------
+// TODO refactor to a new file
+
+function addLineForPointChange(currentCode,newNoteValue, rhythmIndex, instrumentIndex) {
+    //generate new line for changed note
+    newLine = "  b.rhythm" + (instrumentIndex+1) + "[" + rhythmIndex + "] = " + newNoteValue + ";\n"
+    existingLineLoc = currentCode.indexOf("  b.rhythm" + (instrumentIndex+1) + "[" + rhythmIndex + "] =")
+    //i fcode has a line explicitly changed this point, then we update its value
+    if (existingLineLoc >=0) {
+        var lineChPos = codeMirrorInstance.posFromIndex(existingLineLoc);
+        var endReplacePos = JSON.parse(JSON.stringify(lineChPos));
+        endReplacePos.ch = newLine.length+1;
+        codeMirrorInstance
+            .replaceRange(newLine.slice(0, -1), lineChPos, endReplacePos);
+    }
+    //code currently has no effect on manually changed pattern, so we can just add a line
+    else { 
+        codeMirrorInstance.replaceRange(newLine, {line: codeMirrorInstance.lineCount()-2, ch: 0})
+    }
+    return codeMirrorInstance.getValue();
+}
+
+function getLinesOf(searchStr, lines) {
+    var searchStrLen = searchStr.length;
+    if (searchStrLen == 0) {
+        return [];
+    }
+    var startIndex = 0, index, indices = [];
+    while ((index = str.indexOf(searchStr, startIndex)) > -1) {
+        indices.push(index);
+        startIndex = index + searchStrLen;
+    }
+    return indices;
+}
+
+class ParseError extends Error {
+    constructor(message) {
+      super("Unhandled syntax: " + message);
+      this.name = "ParseError";
+    }
+}
+
+const IndexOp = (instIndex, rIndex, val) => ({
+    'opType' : 'IndexOp',
+    'instIndex' : instIndex,
+    'rIndex' : rIndex,
+    'val' : val
+})
+
+const MapOp = (instIndex, fxnParams, fxnBody) => ({
+    'opType' : 'MapOp',
+    'instIndex' : instIndex,
+    'rIndex' : fxnParams,
+    'val' : fxnBody
+})
+
+function parseCodeLine(line) {
+    var indexOperation = new RegExp(/b\.rhythm([1-6])\[(1?[0-9])\] ?= ?([0-2])[;,\n]/);
+    //TODO, relax assumption that all maps are of the form "b.rhythm1 = b.rhythm1.map"
+    var mapOperation = new RegExp(/b\.rhythm([1-6])\.map\((.*)=> *\{(.*)\}\)/);
     
-    //every time we advance, pull latest code and update beat object
+    if (indexOperation.test(line)) {
+        matches = line.match(indexOperation);
+        return IndexOp(matches[1] - 1, matches[2], matches[3])
+    } else if (mapOperation.test(line)) {
+        matches = line.match(mapOperation);
+        return MapOp(matches[1] - 1, matches[2], matches[3])
+    } else {
+        throw ParseError(line);
+    }
+    
+}
+function simplifyCode(updatedCode) {
+    var arrayOfLines = updatedCode.match(/[^\r\n]+/g);
+    //TODO merge multiline commands (e.g. .map w/ fxn over multiple lines) into a single line
+
+    var parsedCode = []
+    arrayOfLines.forEach(line => {
+        try {
+            parsed = parseCodeLine(line)
+            console.log(parsed)
+        } catch (error) {
+            
+        }
+    });
+
+}
+
+function synthCode(newNoteValue, rhythmIndex, instrumentIndex) {
+    //get current code
+    var currentCode = codeMirrorInstance.getValue()
+    
+    var updatedCode = addLineForPointChange(currentCode,newNoteValue, rhythmIndex, instrumentIndex)
+    simplifyCode(updatedCode);
+}
+
+function updatePatternFromCode(){
+    //every time we advance a time step, pull latest code and update beat object
     var updatedCode = codeMirrorInstance.getValue()
     try {
         //TODO if(codeChanged) {
@@ -576,12 +671,17 @@ function advanceNote() {
             theBeat = newBeat;
             redrawAllNotes();
         }
-        
     }
     catch(err) {
 
     }
+}
+
+//-------- END SYNTH CODE ----------
+
+function advanceNote() {
     
+    updatePatternFromCode();
 
     // Advance time by a 16th note...
     var secondsPerBeat = 60.0 / theBeat.tempo;
@@ -847,27 +947,6 @@ function sliderSetPosition(slider, value) {
         var travelH = trackH - thumbH;
 
         elThumb.style.top = travelH * (1.0 - value) + 'px';
-    }
-}
-
-function synthCode(newNoteValue, rhythmIndex, instrumentIndex) {
-    //get current code
-    var currentCode = codeMirrorInstance.getValue()
-    
-    //generate new line for changed note
-    newLine = "  oldBeat.rhythm" + (instrumentIndex+1) + "[" + rhythmIndex + "] = " + newNoteValue + ";\n"
-    existingLineLoc = currentCode.indexOf("  oldBeat.rhythm" + (instrumentIndex+1) + "[" + rhythmIndex + "] =")
-    if (existingLineLoc >=0) {
-        var lineChPos = codeMirrorInstance.posFromIndex(existingLineLoc);
-        var endReplacePos = JSON.parse(JSON.stringify(lineChPos));
-        endReplacePos.ch = newLine.length+1;
-        codeMirrorInstance
-            .replaceRange(newLine.slice(0, -1), lineChPos, endReplacePos);
-    }
-    else {
-        //insert line before return statement
-        //TODO fix function header and return statement so user cannot change it
-        codeMirrorInstance.replaceRange(newLine, {line: codeMirrorInstance.lineCount()-2, ch: 0})
     }
 }
 

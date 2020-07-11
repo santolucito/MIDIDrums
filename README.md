@@ -28,13 +28,13 @@ browserify js/main.js -o js/compiled.js
 
 passing currentTime into the function is bad, because you can't edit the pattern manually. also, it is the same thing as using the index of the array. so it looks cool on the pattern, but ends up not actually being so great.
 
-function genBeat(oldBeat, currentTimestep){
+function genBeat(b, currentTimestep){
   
   let b1 = new Array(16).fill(0);
-  oldBeat.rhythm1 = b1.map((v,i) => {return (v+i)%3})
-  oldBeat.rhythm3 = b1.map((v,i) => {return (v+i+1)%3})
-  oldBeat.rhythm6 = b1.map((v,i) => {return (i%4 == 0) ? 1 : 0})
-  return oldBeat;
+  b.rhythm1 = b1.map((v,i) => {return (v+i)%3})
+  b.rhythm3 = b1.map((v,i) => {return (v+i+1)%3})
+  b.rhythm6 = b1.map((v,i) => {return (i%4 == 0) ? 1 : 0})
+  return b;
 };
 
 # How it works
@@ -53,24 +53,19 @@ If the user changes the pattern to
 
     1 0 0 0
 
-we can update the code with:
+we can update the code by appending a new line:
     
     pattern = new Array(4).fill(0)
     pattern[0] = 1
     return pattern
 
-While this is technically solution, it does not take advantage of the ability of code to make structural changes. For example, if the next change is the user turning off that note
+If the next change is the user turning off that note
 
     0 0 0 0
 
-We should not generate the code
+We should append another new line, but rather just update that line to be pattern[0] = 0.
 
-    pattern[0] = 1
-    pattern[0] = 0
-
-but rather just delete that line all together.
-
-Similarly, if the next change to the pattern was:
+While appending new lines that change one element of the array is technically solution, it does not take advantage of the ability of code to make structural changes. For example, if the next change to the pattern was:
    
     1 0 1 0
 
@@ -83,4 +78,4 @@ but rather,
 
     pattern = pattern.map((v,i) => (i+1)%2)
 
-Not sure how we do this yet
+In order to scope our problem down, we will not try to generate any arbitrary code, but instead focus on a small language
